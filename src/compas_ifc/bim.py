@@ -147,6 +147,10 @@ class BuildingInformationModel(ElementFactoryMixin, InteractionMixin, TreeMixin,
 
     @unit.setter
     def unit(self, value: str):
+        if getattr(self, "_file", None) is None:
+            # compas_model.Model.__init__ assigns its default unit before IFCFile exists;
+            # the IFC project carries the unit, so the default is ignored.
+            return
         projects = self._file.get_entities_by_type("IfcProject")
         if not projects:
             return

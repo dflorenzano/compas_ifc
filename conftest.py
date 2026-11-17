@@ -3,7 +3,7 @@ import math
 import compas
 import numpy
 import pytest
-from compas.geometry import allclose
+from compas.tolerance import TOL
 
 import compas_ifc
 
@@ -42,4 +42,4 @@ def add_np(doctest_namespace):
 
 @pytest.fixture(autouse=True)
 def add_allclose(doctest_namespace):
-    doctest_namespace["allclose"] = allclose
+    doctest_namespace["allclose"] = TOL.is_allclose
