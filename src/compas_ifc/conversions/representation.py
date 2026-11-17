@@ -152,8 +152,7 @@ def _geometry_to_ifc_items(model: BuildingInformationModel, representation):
                 items = brep_to_IfcAdvancedBrep(model, brep)
                 return items, "SolidModel"
             except NotImplementedError:
-                vertices, faces = representation.to_vertices_and_faces()
-                mesh = Mesh.from_vertices_and_faces(vertices, faces)
+                mesh = representation.to_tessellation().to_mesh()
                 ifc_representation = mesh_to_IfcPolygonalFaceSet(model, mesh)
                 return [ifc_representation], "Tessellation"
         else:
@@ -171,7 +170,7 @@ def _geometry_to_ifc_items(model: BuildingInformationModel, representation):
             items = brep_to_IfcAdvancedBrep(model, representation)
             return items, "SolidModel"
         else:
-            mesh, _ = representation.to_tesselation()
+            mesh = representation.to_tessellation().to_mesh()
             ifc_representation = mesh_to_IfcPolygonalFaceSet(model, mesh)
             return [ifc_representation], "Tessellation"
 
