@@ -6,6 +6,8 @@ clash-detection work on the duplex model. Worth filing upstream issues.
 
 ## 1. `Mesh.aabb` / `Mesh.obb` are methods, not properties
 
+**Fixed in COMPAS 3:** both are properties there. The text below describes COMPAS 2.
+
 - `compas.datastructures.Mesh.aabb` is defined as `def aabb(self)` —
   accessing `mesh.aabb` returns a bound method, not a `Box`.
 - `compas.geometry.Geometry.aabb` (Brep, Extrusion, Polyhedron, …) is a
@@ -62,13 +64,40 @@ clash-detection work on the duplex model. Worth filing upstream issues.
   subgeometry is better than `NotImplementedError`.
 - For anything geometry-in-world-space (clash detection, contact
   detection, BVH spatial indexing), go through `GenericElement._world_mesh()`
-  rather than `element.modelgeometry`.
+  rather than `element.model_geometry` (`modelgeometry` before the COMPAS 3
+  version of `compas_model`).
 
 ## Upstream fixes worth proposing
 
-- Make `Mesh.aabb` / `Mesh.obb` properties in `compas.datastructures.Mesh`.
+- Make `Mesh.aabb` / `Mesh.obb` properties in `compas.datastructures.Mesh`
+  (done in COMPAS 3).
 - Align `compute_aabb` signatures between `compas.geometry.Geometry` and
   `compas_model.elements.Element` (either both accept `inflate`, or neither).
 - Fix `Extrusion.transform()` (or whichever upstream class this maps to)
   to transform the profile points, not just the frame — so that
   `Geometry.transformed()` behaves consistently across all subclasses.
+
+### Differences found in the port to COMPAS 3
+
+Found on `compas` `remove-future` @ `99b82a6`, `compas_model` `c3-upgrade` @
+`83df416` and `compas_occ` `c3-upgrade` @ `7fdf2ff`. They are changes of
+behaviour, not all of them defects.
+
+- **`OCCBrepEdge.first_vertex`, `last_vertex` and `to_line()` follow the
+  orientation of the edge in its loop** (`TopExp.FirstVertex(edge, True)`).
+  `compas_occ` 1.5 gave the direction of the curve. The IFC export needs the
+  curve direction and reads it from OCC (`_edge_start`, `_edge_end` in
+  `conversions/brep.py`).
+- **`compas_occ.brep.OCCBrep` is not a `compas.geometry.Brep`.** Type checks
+  in `compas_model` (modifiers, `is_geometry_empty`) reject it; build B-Reps
+  with `Brep.from_native`, `Brep.from_step`, …
+- **`ElementBVH.nearby_elements(element, tolerance)` takes an absolute
+  distance;** `nearest_neighbors` of `compas_model` 0.9 inflated the box by a
+  factor 1.2. With tolerance 0, touching neighbours are missed (63 of 99 wall
+  connections on the Duplex). `compas_ifc` passes 10 % of the largest box side.
+- **`Data.name` is `''` for an empty name;** COMPAS 2 returned the class name.
+- **`Color` rejects NaN components;** a material without a diffuse colour
+  gives NaN face colours, which the viewer object replaces by grey.
+- **`compas_model` has no public way to add a custom interaction record**
+  (`_add_interaction_record` is private). IFC relationships therefore stay
+  dictionaries on the graph edges.
