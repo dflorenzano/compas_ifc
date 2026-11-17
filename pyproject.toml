@@ -28,6 +28,9 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
 ]
 
+[project.entry-points."compas.plugins"]
+compas_ifc = "compas_ifc.brep"
+
 [project.urls]
 Homepage = "https://github.com/compas-dev/compas_ifc"
 Documentation = "https://compas.dev/compas_ifc/"
