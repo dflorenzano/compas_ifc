@@ -143,3 +143,34 @@ def test_save_and_reload(tmp_path):
     reloaded = BuildingInformationModel(str(out), load_geometries=False)
     assert len(reloaded.storeys) == 1
     assert len(reloaded.get_elements_by_type("IfcWall")) == 1
+
+
+# ---------------------------------------------------------------------------
+# Voids as modifiers
+# ---------------------------------------------------------------------------
+
+
+def test_voids_as_modifiers_requires_occ():
+    with pytest.raises(ValueError):
+        BuildingInformationModel(SMALL_PATH, voids_as_modifiers=True)
+
+
+def test_voids_are_tree_children_without_the_flag():
+    model = BuildingInformationModel(SMALL_PATH)
+    assert list(model.modifier_records()) == []
+
+
+def test_voids_as_modifiers_cut_the_host_body():
+    pytest.importorskip("compas_occ")
+    model = BuildingInformationModel(SMALL_PATH, use_occ=True, voids_as_modifiers=True)
+    wall = model.get_elements_by_type("IfcWall")[0]
+    opening = model.get_elements_by_type("IfcOpeningElement")[0]
+    records = model.modifier_records_for(wall)
+    assert len(records) == 1
+    assert records[0].source == str(opening.guid)
+    assert opening.parent is wall
+    uncut = wall.model_geometry.volume
+    void = opening.final_geometry.volume
+    assert void > 0
+    assert wall.final_geometry.volume == pytest.approx(uncut - void, rel=1e-6)
+

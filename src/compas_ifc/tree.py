@@ -8,8 +8,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from compas.geometry import Brep
 from compas.geometry import Frame
 from compas.geometry import Transformation
+from compas_model.modifiers import BrepDifferenceModifier
 
 from compas_ifc.element import GenericElement
 
@@ -204,6 +206,7 @@ class TreeMixin:
             return
 
         host_label = f"{host_element.ifc_type} '{host_element.name}'"
+        cut_by_modifiers = self.voids_as_modifiers and self._load_uncut_host_body(host_element)
 
         for opening_entity in openings:
             opening_elem = GenericElement._from_ifc_entity(opening_entity)
@@ -220,6 +223,9 @@ class TreeMixin:
                 del opening_elem._global_transform
 
             self.add_element(opening_elem, parent=host_element)
+
+            if cut_by_modifiers and isinstance(opening_elem._visual_geometry, Brep):
+                self.add_modifier(opening_elem, host_element, BrepDifferenceModifier())
 
             # Add fillers (doors/windows) under this opening
             filler_labels = []
@@ -247,6 +253,23 @@ class TreeMixin:
             for fl in filler_labels:
                 chain += f" -> {fl}"
             self._void_fill_log.append(chain)
+
+    def _load_uncut_host_body(self, host_element) -> bool:
+        """Replace the visual geometry of a host by its body without openings.
+
+        Returns True if the host now has an uncut solid body, so that its
+        openings can be modifier records. A body without a solid (for example
+        the surface model of an instanced furnishing element) cannot be cut by
+        a Boolean difference; the host then keeps the body that the geometry
+        iterator has already cut.
+        """
+        entity = host_element._ifc_entity
+        uncut = self._file.load_uncut_geometry(entity)
+        if uncut is None or not uncut.solids:
+            return False
+        self._file._geometrymap[entity.entity.id()] = uncut
+        entity.visual_geometry = None
+        return True
 
     def _rectify_ifc_placement(self, element, parent_element, local_transform):
         """Rewrite an element's IfcLocalPlacement to use the spatial parent's placement.

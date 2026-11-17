@@ -57,6 +57,14 @@ class BuildingInformationModel(ElementFactoryMixin, InteractionMixin, TreeMixin,
         -> IfcBuildingStorey 'S1'"). Default is False.
     name : str, optional
         Name of the model.
+    voids_as_modifiers : bool, optional
+        If True, each ``IfcRelVoidsElement`` whose host body is a solid becomes
+        a modifier record (``BrepDifferenceModifier``) from the opening to its
+        host: the host body without the openings is the base geometry of the
+        element, and ``final_geometry`` is that body with the openings
+        subtracted. A host whose body has no solid keeps the body with the
+        openings already cut and gets no record. Requires ``use_occ=True``.
+        Default is False.
 
     """
 
@@ -69,9 +77,15 @@ class BuildingInformationModel(ElementFactoryMixin, InteractionMixin, TreeMixin,
         rectify_placements: bool = True,
         rectify_verbose: bool = False,
         name: str = None,
+        voids_as_modifiers: bool = False,
         **kwargs,
     ) -> None:
+        if voids_as_modifiers and not use_occ:
+            raise ValueError("voids_as_modifiers requires use_occ=True.")
+
         super().__init__(name=name, **kwargs)
+
+        self.voids_as_modifiers = voids_as_modifiers
 
         # IFC file wrapper — pass self so Base.model resolves to this instance
         self._file = IFCFile(
