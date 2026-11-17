@@ -40,7 +40,7 @@ import sys
 
 import ifcopenshell
 import ifcopenshell.validate
-from compas_occ.brep import OCCBrep
+from compas.geometry import Brep
 
 from compas_ifc.bim import BuildingInformationModel
 
@@ -210,7 +210,7 @@ load_errors = []
 for shape_name in available:
     step_path = os.path.join(STEP_DIR, f"{shape_name}.stp")
     try:
-        brep = OCCBrep.from_step(step_path)
+        brep = Brep.from_step(step_path)
         vol = brep.volume
         area = brep.area
         originals[shape_name] = {"brep": brep, "volume": vol, "area": area}

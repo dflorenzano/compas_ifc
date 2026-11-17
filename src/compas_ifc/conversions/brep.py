@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING
 
 from compas.geometry import Brep
 from compas.geometry import Frame
+from compas.geometry import Point
+from compas.geometry import Vector
 from compas.tolerance import TOL
 
 from compas_ifc.entities.base import Base
@@ -22,6 +24,27 @@ from .primitives import point_to_IfcCartesianPoint
 from .shapes import occ_cylinder_to_ifc_cylindrical_surface
 from .shapes import occ_sphere_to_ifc_spherical_surface
 from .shapes import occ_torus_to_ifc_toroidal_surface
+
+
+def _edge_start(edge) -> Point:
+    """Start point of an edge in the direction of its curve.
+
+    ``OCCBrepEdge.first_vertex`` follows the orientation of the edge in its
+    loop (COMPAS 3); ``IfcEdgeCurve`` needs the direction of the curve, and
+    ``IfcOrientedEdge.Orientation`` then carries the orientation.
+    """
+    from OCC.Core.BRep import BRep_Tool
+    from OCC.Core.TopExp import topexp
+
+    return Point(*BRep_Tool.Pnt(topexp.FirstVertex(edge.occ_edge)).Coord())
+
+
+def _edge_end(edge) -> Point:
+    """End point of an edge in the direction of its curve (see :func:`_edge_start`)."""
+    from OCC.Core.BRep import BRep_Tool
+    from OCC.Core.TopExp import topexp
+
+    return Point(*BRep_Tool.Pnt(topexp.LastVertex(edge.occ_edge)).Coord())
 
 
 def calculate_knots_and_multiplicities(knot_sequence):
@@ -76,19 +99,19 @@ def brep_to_IfcAdvancedBrep(model: BuildingInformationModel, brep: Brep) -> list
     def get_ifc_bspline_edge(edge):
         curve = edge.curve
         for occ_curve, ifc_edge in curves.items():
-            if occ_curve.IsEqual(curve.occ_curve, 1e-6):
+            if occ_curve.IsEqual(curve.native_curve, 1e-6):
                 return ifc_edge
         return None
 
     def get_ifc_line_edge(edge):
-        key = TOL.geometric_key(edge.first_vertex.point) + "-" + TOL.geometric_key(edge.last_vertex.point)
-        rev_key = TOL.geometric_key(edge.last_vertex.point) + "-" + TOL.geometric_key(edge.first_vertex.point)
+        key = TOL.geometric_key(_edge_start(edge)) + "-" + TOL.geometric_key(_edge_end(edge))
+        rev_key = TOL.geometric_key(_edge_end(edge)) + "-" + TOL.geometric_key(_edge_start(edge))
         return lines.get(key) or lines.get(rev_key)
 
     def get_ifc_circle_edge(edge):
         c = edge.curve
-        sv = TOL.geometric_key(edge.first_vertex.point)
-        ev = TOL.geometric_key(edge.last_vertex.point)
+        sv = TOL.geometric_key(_edge_start(edge))
+        ev = TOL.geometric_key(_edge_end(edge))
         key = "{:.6f},{:.6f},{:.6f}-{:.6f}-{}-{}".format(*c.frame.point, c.radius, sv, ev)
         return circles.get(key), key
 
@@ -102,8 +125,8 @@ def brep_to_IfcAdvancedBrep(model: BuildingInformationModel, brep: Brep) -> list
         loc = ellipse.Location().Coord()
         a = ellipse.MajorRadius()
         b = ellipse.MinorRadius()
-        sv = TOL.geometric_key(edge.first_vertex.point)
-        ev = TOL.geometric_key(edge.last_vertex.point)
+        sv = TOL.geometric_key(_edge_start(edge))
+        ev = TOL.geometric_key(_edge_end(edge))
         key = "{:.6f},{:.6f},{:.6f}-{:.6f}-{:.6f}-{}-{}".format(*loc, a, b, sv, ev)
         return ellipses.get(key), key
 
@@ -125,9 +148,9 @@ def brep_to_IfcAdvancedBrep(model: BuildingInformationModel, brep: Brep) -> list
             if get_ifc_bspline_edge(edge):
                 continue
 
-            start_vertex = get_ifc_vertex(edge.first_vertex.point)
-            is_closed = TOL.geometric_key(edge.first_vertex.point) == TOL.geometric_key(edge.last_vertex.point)
-            end_vertex = start_vertex if is_closed else get_ifc_vertex(edge.last_vertex.point)
+            start_vertex = get_ifc_vertex(_edge_start(edge))
+            is_closed = TOL.geometric_key(_edge_start(edge)) == TOL.geometric_key(_edge_end(edge))
+            end_vertex = start_vertex if is_closed else get_ifc_vertex(_edge_end(edge))
 
             curve = edge.curve
             control_points = [get_ifc_point(point) for point in curve.points]
@@ -135,7 +158,7 @@ def brep_to_IfcAdvancedBrep(model: BuildingInformationModel, brep: Brep) -> list
 
             # OCC simplifies knots/multiplicities for periodic curves; restore
             # the full sequence and duplicate the first control point/weight.
-            knots, multiplicities = calculate_knots_and_multiplicities(curve.knotsequence)
+            knots, multiplicities = calculate_knots_and_multiplicities(curve.knotvector)
             if curve.is_closed:
                 control_points.append(control_points[0])
                 weights.append(weights[0])
@@ -160,22 +183,22 @@ def brep_to_IfcAdvancedBrep(model: BuildingInformationModel, brep: Brep) -> list
                 EdgeGeometry=IfcBSplineCurve,
                 SameSense=True,
             )
-            curves[curve.occ_curve] = IfcEdgeCurve
+            curves[curve.native_curve] = IfcEdgeCurve
 
         elif edge.is_line:
             if get_ifc_line_edge(edge):
                 continue
 
-            start_pt = get_ifc_point(edge.first_vertex.point)
-            end_pt = get_ifc_point(edge.last_vertex.point)  # noqa: F841 — used implicitly via vertex
-            start_vertex = get_ifc_vertex(edge.first_vertex.point)
-            end_vertex = get_ifc_vertex(edge.last_vertex.point)
+            start_pt = get_ifc_point(_edge_start(edge))
+            end_pt = get_ifc_point(_edge_end(edge))  # noqa: F841 — used implicitly via vertex
+            start_vertex = get_ifc_vertex(_edge_start(edge))
+            end_vertex = get_ifc_vertex(_edge_end(edge))
 
             # IfcLine: parametric infinite line defined by a point and direction vector.
             # Do not use IfcPolyLine (polyline approximation) for straight edges.
             direction = model._create(
                 "IfcDirection",
-                DirectionRatios=list(edge.to_line().direction.unitized()),
+                DirectionRatios=list(Vector.from_start_end(_edge_start(edge), _edge_end(edge)).unitized()),
             )
             ifc_vector = model._create("IfcVector", Orientation=direction, Magnitude=1.0)
             IfcLine = model._create("IfcLine", Pnt=start_pt, Dir=ifc_vector)
@@ -187,7 +210,7 @@ def brep_to_IfcAdvancedBrep(model: BuildingInformationModel, brep: Brep) -> list
                 EdgeGeometry=IfcLine,
                 SameSense=True,
             )
-            key = TOL.geometric_key(edge.first_vertex.point) + "-" + TOL.geometric_key(edge.last_vertex.point)
+            key = TOL.geometric_key(_edge_start(edge)) + "-" + TOL.geometric_key(_edge_end(edge))
             lines[key] = IfcEdgeCurve
 
         elif edge.is_circle:
@@ -196,9 +219,9 @@ def brep_to_IfcAdvancedBrep(model: BuildingInformationModel, brep: Brep) -> list
                 continue
 
             c = edge.curve
-            start_vertex = get_ifc_vertex(edge.first_vertex.point)
-            is_closed = TOL.geometric_key(edge.first_vertex.point) == TOL.geometric_key(edge.last_vertex.point)
-            end_vertex = start_vertex if is_closed else get_ifc_vertex(edge.last_vertex.point)
+            start_vertex = get_ifc_vertex(_edge_start(edge))
+            is_closed = TOL.geometric_key(_edge_start(edge)) == TOL.geometric_key(_edge_end(edge))
+            end_vertex = start_vertex if is_closed else get_ifc_vertex(_edge_end(edge))
 
             IfcCircle = model._create(
                 "IfcCircle",
@@ -231,9 +254,9 @@ def brep_to_IfcAdvancedBrep(model: BuildingInformationModel, brep: Brep) -> list
                 zdir = ellipse.Axis().Direction().Coord()
                 placement = create_IfcAxis2Placement3D(model, loc, zdir, xdir)
 
-                start_vertex = get_ifc_vertex(edge.first_vertex.point)
-                is_closed = TOL.geometric_key(edge.first_vertex.point) == TOL.geometric_key(edge.last_vertex.point)
-                end_vertex = start_vertex if is_closed else get_ifc_vertex(edge.last_vertex.point)
+                start_vertex = get_ifc_vertex(_edge_start(edge))
+                is_closed = TOL.geometric_key(_edge_start(edge)) == TOL.geometric_key(_edge_end(edge))
+                end_vertex = start_vertex if is_closed else get_ifc_vertex(_edge_end(edge))
 
                 IfcEllipse = model._create(
                     "IfcEllipse",
