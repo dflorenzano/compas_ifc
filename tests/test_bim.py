@@ -196,3 +196,22 @@ def test_brep_export_round_trips_a_box(tmp_path):
     reloaded = BuildingInformationModel(path, use_occ=True)
     element = [e for e in reloaded.elements() if e.name == "box"][0]
     assert element._visual_geometry.volume == pytest.approx(brep.volume, rel=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# Viewer scene objects
+# ---------------------------------------------------------------------------
+
+
+def test_viewer_scene_objects_are_registered():
+    pytest.importorskip("compas_viewer")
+    from compas.geometry import Brep
+    from compas.scene.context import ITEM_SCENEOBJECT
+
+    from compas_ifc.brep import TessellatedBrep
+    from compas_ifc.brep import register_scene_objects
+
+    register_scene_objects()
+    assert ITEM_SCENEOBJECT["Viewer"][TessellatedBrep].__name__ == "TessellatedBrepObject"
+    assert ITEM_SCENEOBJECT["Viewer"][Brep].__name__ == "IFCBrepObject"
+

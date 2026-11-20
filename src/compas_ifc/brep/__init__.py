@@ -9,15 +9,16 @@ from compas.plugins import plugin
 from compas.scene import register
 
 
-@plugin(category="factories", requires=["compas_viewer"])
+# Lower priority than compas_viewer: its own registrations run first, so these are the ones kept.
+@plugin(category="factories", requires=["compas_viewer"], priority=-1)
 def register_scene_objects():
     register(TessellatedBrep, TessellatedBrepObject, context="Viewer")
 
     try:
-        from compas_occ.brep import OCCBrep
+        from compas.geometry import Brep
         from .ifcbrepobject import IFCBrepObject
 
-        register(OCCBrep, IFCBrepObject, context="Viewer")
+        register(Brep, IFCBrepObject, context="Viewer")
 
     except ImportError:
         pass

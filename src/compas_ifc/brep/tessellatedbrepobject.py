@@ -14,7 +14,9 @@ class TessellatedBrepObject(ViewerSceneObject):
         if not facecolors:
             self.facecolors = [Color(0.9, 0.9, 0.9) for _ in range(len(self.tessellatedbrep.faces) * 3)]
         else:
-            facecolors = np.array(facecolors)
+            facecolors = np.array(facecolors, dtype=float)
+            # A material without a diffuse colour gives NaN; show it in the default grey.
+            facecolors[np.isnan(facecolors).any(axis=1)] = (0.9, 0.9, 0.9, 1.0)
             self.facecolors = facecolors
             if np.mean(facecolors[:, 3]) < 1:
                 # If mean alpha is less than 1, means the object has transparency

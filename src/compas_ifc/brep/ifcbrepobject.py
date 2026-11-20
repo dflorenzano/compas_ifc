@@ -1,65 +1,52 @@
 try:
     import numpy as np
     from compas.colors import Color
-    from compas_occ.brep import OCCBrep
+    from compas.geometry import Brep
     from compas_viewer.scene.brepobject import BRepObject
 
     class IFCBrepObject(BRepObject):
-        def __init__(self, shellcolors=None, linear_deflection=100, **kwargs):
-            brep = kwargs["item"]
-            brep.simplify()
-            brep.heal()
+        """Viewer object of a BRep loaded from IFC, with one colour per shell.
 
+        Without ``shellcolors`` it is the ``BRepObject`` of compas_viewer.
+        """
+
+        def __init__(self, shellcolors=None, **kwargs):
             super().__init__(**kwargs)
-            self.shells = [shell.to_tesselation(linear_deflection)[0] for shell in self.brep.shells]
-            self.shellcolors = shellcolors or [self.facecolor.rgba for _ in self.shells]
-            self._bounding_box_center = None
+            self.shellcolors = shellcolors
 
         @property
-        def brep(self) -> OCCBrep:
+        def brep(self) -> Brep:
             return self.item
 
-        @property
-        def bounding_box_center(self):
-            if not self._bounding_box_center:
-                self._bounding_box_center = np.mean(self.points, axis=0)
-            return self._bounding_box_center
-
-        def _read_frontfaces_data(self):
+        def _shell_buffers(self, reverse=False):
             positions = []
-            elements = np.array([], dtype=int).reshape(0, 3)
+            elements = []
             colors = []
-
-            for shell, color in zip(self.shells, self.shellcolors):
-                shell_positions, shell_elements = shell.to_vertices_and_faces()
-                if len(shell_elements) == 0:
+            for shell, color in zip(self.brep.shells, self.shellcolors):
+                tessellation = shell.to_tessellation()
+                offset = len(positions)
+                triangles = np.asarray(tessellation.triangles, dtype=int).reshape(-1, 3)
+                if len(triangles) == 0:
                     continue
-                shell_elements = np.array(shell_elements) + len(positions)
-                positions += shell_positions
-                elements = np.vstack((elements, shell_elements))
-                colors += [Color(*color)] * len(shell_positions)  # TODO: this is terrible
+                if reverse:
+                    triangles = triangles[:, ::-1]
+                vertices = np.asarray(tessellation.vertices, dtype=float).reshape(-1, 3).tolist()
+                positions += vertices
+                elements += (triangles + offset).tolist()
+                colors += [Color(*color)] * len(vertices)
                 if color[3] < 1:
                     self.opacity = 0.999  # NOTE: this is to trigger the object order sorting
-
             return positions, colors, elements
+
+        def _read_frontfaces_data(self):
+            if not self.shellcolors:
+                return super()._read_frontfaces_data()
+            return self._shell_buffers()
 
         def _read_backfaces_data(self):
-            positions = []
-            elements = np.array([], dtype=int).reshape(0, 3)
-            colors = []
-
-            for shell, color in zip(self.shells, self.shellcolors):
-                shell_positions, shell_elements = shell.to_vertices_and_faces()
-                if len(shell_elements) == 0:
-                    continue
-                for element in shell_elements:
-                    element.reverse()
-                shell_elements = np.array(shell_elements) + len(positions)
-                positions += shell_positions
-                elements = np.vstack((elements, shell_elements))
-                colors += [Color(*color)] * len(shell_positions)
-
-            return positions, colors, elements
+            if not self.shellcolors:
+                return super()._read_backfaces_data()
+            return self._shell_buffers(reverse=True)
 
 except ImportError:
     pass
