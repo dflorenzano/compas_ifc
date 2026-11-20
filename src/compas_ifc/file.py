@@ -1110,6 +1110,35 @@ class IFCFile(object):
         """
         return self._stylemap.get(entity.entity.id(), {})
 
+    def load_uncut_geometry(self, entity):
+        """Evaluate the body of a product without its openings cut out.
+
+        Parameters
+        ----------
+        entity : :class:`compas_ifc.entities.base.Base`
+            The product (for example a wall that has openings).
+
+        Returns
+        -------
+        :class:`compas.geometry.Brep` or None
+            The body before the opening subtractions, in the same coordinates
+            as the geometry of :meth:`load_geometries` with ``use_occ``.
+            None if the product has no shape.
+
+        """
+        import ifcopenshell.geom
+        from compas.geometry import Brep
+
+        settings = ifcopenshell.geom.settings()
+        settings.set(settings.CONVERT_BACK_UNITS, True)
+        settings.set(settings.USE_PYTHON_OPENCASCADE, True)
+        settings.set("disable-opening-subtractions", True)
+        try:
+            shape = ifcopenshell.geom.create_shape(settings, entity.entity)
+        except Exception:
+            return None
+        return Brep.from_native(shape.geometry)
+
     def load_geometries(self, include=None, exclude=None):
         """
         Load all the geometries of the IFC file using a fast multithreaded iterator.

@@ -320,6 +320,12 @@ class GenericElement(Generic[T], Element):
     # ==========================================================================
 
     def compute_base_geometry(self):
+        # With ``voids_as_modifiers`` the stages of compas_model need a BRep:
+        # the body without openings, which the modifier records then cut.
+        if getattr(getattr(self, "model", None), "voids_as_modifiers", False):
+            visual = self._visual_geometry
+            if isinstance(visual, Brep):
+                return visual
         return self.geometry
 
     def compute_aabb(self, inflate: float = 1.0) -> Optional[Box]:
