@@ -75,6 +75,32 @@ cd compas_ifc
 pip install -e ".[dev]"
 ```
 
+Requires Python 3.12 and COMPAS 3.
+
+### Before the COMPAS 3 release
+
+`compas` 3 and the matching `compas_model` are not on PyPI yet, so the
+commands above cannot resolve them. Install them first from local clones of
+their COMPAS 3 branches (`<clones>` is the folder that holds the clones), then
+install `compas_ifc`; pip then fetches only the other dependencies:
+
+    pip install -e <clones>/compas -e <clones>/compas_model
+    pip install -e .
+
+For the optional packages below, install their clones the same way before
+`compas_ifc`: `<clones>/compas_occ` (needs `pythonocc-core` from conda-forge)
+and `<clones>/compas_viewer`. The viewer objects are found only when
+`compas_ifc` is installed (`pip install -e .`), not from `PYTHONPATH` alone.
+
+This version was tested with:
+
+| Package | Repository | Branch | Commit |
+|---------|------------|--------|--------|
+| compas | compas-dev/compas | `remove-future` | `99b82a6` |
+| compas_model | BlockResearchGroup/compas_model | `c3-upgrade` | `83df416` |
+| compas_occ | compas-dev/compas_occ | `c3-upgrade` | `7fdf2ff` |
+| compas_viewer | compas-dev/compas_viewer | `c3-upgrade` | `cf5a519` |
+
 Optional dependencies:
 
 * [compas_occ](https://github.com/compas-dev/compas_occ) — high-fidelity B-Rep

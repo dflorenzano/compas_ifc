@@ -214,4 +214,3 @@ def test_viewer_scene_objects_are_registered():
     register_scene_objects()
     assert ITEM_SCENEOBJECT["Viewer"][TessellatedBrep].__name__ == "TessellatedBrepObject"
     assert ITEM_SCENEOBJECT["Viewer"][Brep].__name__ == "IFCBrepObject"
-

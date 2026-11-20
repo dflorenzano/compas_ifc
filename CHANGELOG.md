@@ -7,11 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+Port to COMPAS 3 and to the `c3-upgrade` branch of `compas_model`. These
+packages are not released yet; see "Installation" in the README for the
+install from local clones and for the commits this port was tested with.
+
 ### Added
+
+* `BuildingInformationModel(voids_as_modifiers=True)` (requires `use_occ=True`):
+  each `IfcRelVoidsElement` whose host body is a solid becomes a
+  `BrepDifferenceModifier` record from the opening to its host. The host body
+  without openings is the base geometry of the element; `final_geometry` is
+  the body with the openings subtracted.
+* `IFCFile.load_uncut_geometry(entity)`: the body of a product without its
+  openings cut out.
+* Entry point `compas.plugins` for the viewer scene objects.
 
 ### Changed
 
+* **Breaking:** requires `compas >= 3.0.0`, the COMPAS 3 version of
+  `compas_model`, and Python 3.12. COMPAS 2 is supported up to `2.1.0`.
+* **Breaking:** with `use_occ=True` the visual geometry of an element is a
+  `compas.geometry.Brep` (was `compas_occ.brep.OCCBrep`). Geometry given to
+  `create_element` for a B-Rep export is a `compas.geometry.Brep` too.
+* **Breaking:** `GenericElement.compute_elementgeometry` is
+  `compute_base_geometry` (the name `compas_model` calls).
+* Contacts found by `compute_connections` are `compas_model` contacts built
+  from a `PlanarRegion`.
+* Nodes of the interaction graph are element GUIDs. IFC relationships are
+  still dictionaries in the edge attribute `relationships`.
+* `IFCBrepObject` is built on the `BRepObject` of `compas_viewer` and takes
+  `shellcolors` only.
+* `scripts/dev_tests/8.1_brep_generate.py` writes to `temp/` in the repository
+  root.
+
 ### Removed
+
+* `linear_deflection` argument of `IFCBrepObject`.
+* `__all_plugins__` (replaced by the entry point).
 
 
 ## [2.1.0] 2026-07-13

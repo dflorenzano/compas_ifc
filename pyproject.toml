@@ -13,7 +13,7 @@ keywords = ["compas", "ifc", "bim", "interoperability"]
 authors = [{ name = "Tom Van Mele", email = "van.mele@arch.ethz.ch" }, { name = "Li Chen", email = "li.chen@arch.ethz.ch" }]
 license = { file = "LICENSE" }
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 dynamic = ['dependencies', 'optional-dependencies', 'version']
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -23,9 +23,7 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 
 [project.entry-points."compas.plugins"]
@@ -116,7 +114,7 @@ line-length = 179
 [tool.ruff]
 line-length = 179
 indent-width = 4
-target-version = "py39"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
