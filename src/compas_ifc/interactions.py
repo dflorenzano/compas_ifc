@@ -58,7 +58,8 @@ class InteractionMixin:
         """
         guid = str(element.guid)
         self._elements[guid] = element
-        self.graph.add_element(element)
+        self.graph.add_node(key=guid)
+        element.graphnode = guid
         element.model = self
         if element.global_id:
             self._elements_by_global_id[element.global_id] = element
@@ -152,7 +153,8 @@ class InteractionMixin:
             """
             if elem_a is None or elem_b is None:
                 return None
-            edge = self.add_interaction(elem_a, elem_b)
+            self.add_interaction(elem_a, elem_b)
+            edge = self._edge_between(elem_a, elem_b)
             rels = self.graph.edge_attribute(edge, "relationships")
             if rels is None:
                 rels = []
@@ -439,7 +441,7 @@ class InteractionMixin:
             frontier = next_frontier
             depth += 1
 
-        return [self.graph.node_element(n) for n in order]
+        return [self.element_by_guid(n) for n in order]
 
     def _edge_elements(self, edge) -> tuple:
         """Return the two GenericElements connected by a graph edge.
@@ -455,7 +457,14 @@ class InteractionMixin:
 
         """
         u, v = edge
-        return self.graph.node_element(u), self.graph.node_element(v)
+        return self.element_by_guid(u), self.element_by_guid(v)
+
+    def _edge_between(self, a, b) -> tuple:
+        """Return the graph edge joining two elements, in the direction it is stored."""
+        edge = (a.graphnode, b.graphnode)
+        if self.graph.has_edge(edge):
+            return edge
+        return (b.graphnode, a.graphnode)
 
     # ==========================================================================
     # Automatic connection detection
@@ -550,7 +559,7 @@ class InteractionMixin:
         seen_pairs = set()
 
         for element in candidates:
-            neighbours = bvh.nearest_neighbors(element)
+            neighbours = bvh.nearby_elements(element)
             for neighbour in neighbours:
                 pair = frozenset((id(element), id(neighbour)))
                 if pair in seen_pairs:
@@ -713,7 +722,7 @@ class InteractionMixin:
         seen_pairs = set()
 
         for element in candidates:
-            neighbours = bvh.nearest_neighbors(element)
+            neighbours = bvh.nearby_elements(element)
             for neighbour in neighbours:
                 pair = frozenset((id(element), id(neighbour)))
                 if pair in seen_pairs:

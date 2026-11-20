@@ -319,27 +319,27 @@ class GenericElement(Generic[T], Element):
     # compas_model.Element abstract method implementations
     # ==========================================================================
 
-    def compute_elementgeometry(self, include_features: bool = False):
+    def compute_base_geometry(self):
         return self.geometry
 
     def compute_aabb(self, inflate: float = 1.0) -> Optional[Box]:
         # Extrusion.transform leaves profile points local, so go through the
-        # tessellated visual_geometry rather than self.elementgeometry.
+        # tessellated visual_geometry rather than self.geometry.
         verts, _ = self._world_triangles()
         if verts is None or len(verts) == 0:
             return None
         return _inflate_box(Box.from_bounding_box(bounding_box(verts)), inflate)
 
     def compute_obb(self, inflate: float = 1.0) -> Optional[Box]:
-        from compas.geometry import oriented_bounding_box_numpy
+        from compas.geometry import oriented_bounding_box
 
         verts, _ = self._world_triangles()
         if verts is None or len(verts) == 0:
             return None
-        return _inflate_box(Box.from_bounding_box(oriented_bounding_box_numpy(verts)), inflate)
+        return _inflate_box(Box.from_bounding_box(oriented_bounding_box(verts.tolist())), inflate)
 
     def compute_collision_mesh(self, inflate: float = 1.0) -> Optional[Mesh]:
-        geom = self.elementgeometry
+        geom = self.geometry
         if geom is None:
             return None
         if isinstance(geom, Mesh):
@@ -356,7 +356,7 @@ class GenericElement(Generic[T], Element):
         return None
 
     def compute_point(self) -> Optional[Point]:
-        geom = self.elementgeometry
+        geom = self.geometry
         if geom is None:
             return None
         if hasattr(geom, "centroid"):
