@@ -1141,9 +1141,9 @@ class IFCFile(object):
             while True:
                 shape = iterator.get()
                 if self.use_occ:
-                    from compas_occ.brep import OCCBrep
+                    from compas.geometry import Brep
 
-                    brep = OCCBrep.from_shape(shape.geometry)
+                    brep = Brep.from_native(shape.geometry)
 
                     shellcolors = []
                     for style_id, style in zip(shape.style_ids, shape.styles):
@@ -1208,9 +1208,9 @@ class IFCFile(object):
             except Exception:
                 continue
             if self.use_occ:
-                from compas_occ.brep import OCCBrep
+                from compas.geometry import Brep
 
-                self._geometrymap[product.id()] = OCCBrep.from_shape(shape.geometry)
+                self._geometrymap[product.id()] = Brep.from_native(shape.geometry)
                 self._stylemap.setdefault(product.id(), {"shellcolors": []})
             else:
                 from .brep import TessellatedBrep

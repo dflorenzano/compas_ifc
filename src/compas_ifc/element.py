@@ -344,9 +344,9 @@ class GenericElement(Generic[T], Element):
             return None
         if isinstance(geom, Mesh):
             return geom
-        if hasattr(geom, "to_tesselation") or hasattr(geom, "to_mesh"):
+        if hasattr(geom, "to_tessellation") or hasattr(geom, "to_mesh"):
             try:
-                return geom.to_tesselation()
+                return geom.to_tessellation().to_mesh()
             except Exception:
                 pass
             try:
@@ -407,10 +407,9 @@ class GenericElement(Generic[T], Element):
             from compas_ifc.algorithms.collisions import _mesh_to_numpy
 
             mesh = None
-            if hasattr(vg, "to_tesselation"):
-                # Brep/OCCBrep.to_tesselation() returns a ``(Mesh, boundaries)`` tuple.
-                result = vg.to_tesselation()
-                mesh = result[0] if isinstance(result, tuple) else result
+            if hasattr(vg, "to_tessellation"):
+                # Brep.to_tessellation() returns a ``Tessellation`` (COMPAS 3).
+                mesh = vg.to_tessellation().to_mesh()
             elif hasattr(vg, "to_mesh"):
                 # Parametric representations (Extrusion, Pipe, ...) return a Mesh;
                 # a few return a ``(vertices, faces)`` tuple instead.

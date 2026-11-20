@@ -119,6 +119,15 @@ def test_compute_collisions_type_filter_matches_subclasses():
 # ---------------------------------------------------------------------------
 
 
+def test_compute_connections_returns_contacts_with_area():
+    model = BuildingInformationModel(DUPLEX_PATH)
+    found = model.compute_connections(element_types=["IfcWall"], create_ifc_relations=False)
+    assert found > 0
+    contacts = [c for edge in model.graph.edges() for c in (model.graph.edge_attribute(edge, "contacts") or [])]
+    assert contacts
+    assert all(c.size > 0 for c in contacts)
+
+
 def test_save_and_reload(tmp_path):
     model = BuildingInformationModel.template(unit="m")
     storey = model.storeys[0]

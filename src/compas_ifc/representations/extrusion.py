@@ -142,12 +142,12 @@ class Extrusion(Geometry):
             outer area minus the sum of void areas.
         """
         if isinstance(self.profile, Polygon):
-            return self.profile.area
+            return self.profile.area()
         elif isinstance(self.profile, Circle):
-            return self.profile.area
+            return self.profile.area()
         elif isinstance(self.profile, tuple):
-            outer_area = self.profile[0].area
-            void_area = sum(v.area for v in self.profile[1])
+            outer_area = self.profile[0].area()
+            void_area = sum(v.area() for v in self.profile[1])
             return outer_area - void_area
         return 0.0
 

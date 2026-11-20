@@ -21,6 +21,19 @@ def _matches_any_type(element, ifc_types) -> bool:
     return any(element._ifc_entity.is_a(t) for t in ifc_types)
 
 
+def _broadphase_tolerance(box) -> float:
+    """Absolute search distance for the BVH neighbour query of an element.
+
+    ``compas_model`` 0.9 inflated the query box by a factor 1.2 (10 % of each
+    side, on both ends). 10 % of the largest side is a superset of that query,
+    so touching neighbours are still found; the tight AABB test that follows
+    removes the extra candidates.
+    """
+    if box is None:
+        return 0.0
+    return 0.1 * max(box.xsize, box.ysize, box.zsize)
+
+
 class InteractionMixin:
     """Mixin that adds interaction-graph capabilities to a Model subclass.
 
@@ -559,7 +572,7 @@ class InteractionMixin:
         seen_pairs = set()
 
         for element in candidates:
-            neighbours = bvh.nearby_elements(element)
+            neighbours = bvh.nearby_elements(element, tolerance=_broadphase_tolerance(world_aabbs[id(element)]))
             for neighbour in neighbours:
                 pair = frozenset((id(element), id(neighbour)))
                 if pair in seen_pairs:
@@ -722,7 +735,7 @@ class InteractionMixin:
         seen_pairs = set()
 
         for element in candidates:
-            neighbours = bvh.nearby_elements(element)
+            neighbours = bvh.nearby_elements(element, tolerance=_broadphase_tolerance(world_aabbs[id(element)]))
             for neighbour in neighbours:
                 pair = frozenset((id(element), id(neighbour)))
                 if pair in seen_pairs:

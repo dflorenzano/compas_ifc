@@ -104,7 +104,7 @@ def fast_mesh_mesh_collision(
 
 def _mesh_to_numpy(mesh: Mesh) -> tuple[np.ndarray, np.ndarray]:
     """Convert a compas Mesh to (vertices, triangle_indices) numpy arrays."""
-    verts, faces = mesh.to_vertices_and_faces(triangulated=True)
+    verts, faces = mesh.triangulated().to_vertices_and_faces()
     return (
         np.asarray(verts, dtype=np.float64),
         np.asarray(faces, dtype=np.int64) if faces else np.empty((0, 3), dtype=np.int64),

@@ -26,7 +26,9 @@ import numpy as np
 from compas.datastructures import Mesh
 from compas.geometry import Frame
 from compas.geometry import Point
+from compas.geometry import Polygon
 from compas.geometry import centroid_polygon
+from compas_model.geometry import PlanarRegion
 from compas_model.interactions import Contact
 from shapely.geometry import Polygon as ShapelyPolygon
 
@@ -121,8 +123,8 @@ def fast_mesh_mesh_contacts(
 
         result = _polygon_overlap_fast(a_pts, b_pts, a_normal, tolerance, minimum_area)
         if result is not None:
-            points, frame, area = result
-            contacts.append(contacttype(points=points, frame=frame, size=area))
+            points, frame, _ = result
+            contacts.append(contacttype(PlanarRegion(Polygon(points), frame=frame)))
 
     return contacts
 
