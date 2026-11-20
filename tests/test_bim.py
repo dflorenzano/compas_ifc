@@ -174,3 +174,25 @@ def test_voids_as_modifiers_cut_the_host_body():
     assert void > 0
     assert wall.final_geometry.volume == pytest.approx(uncut - void, rel=1e-6)
 
+
+# ---------------------------------------------------------------------------
+# Export of OCC BReps
+# ---------------------------------------------------------------------------
+
+
+def test_brep_export_round_trips_a_box(tmp_path):
+    pytest.importorskip("compas_occ")
+    from compas.geometry import Box
+    from compas.geometry import Brep
+
+    # Half of the edges of a box face are reversed in their loop: the export
+    # has to write each edge in the direction of its curve.
+    brep = Brep.from_box(Box(2.0, 2.0, 2.0))
+    model = BuildingInformationModel.template(unit="m", use_occ=True)
+    model.create_element(name="box", geometry=brep, parent=model.storeys[0])
+    path = str(tmp_path / "box.ifc")
+    model.save(path)
+
+    reloaded = BuildingInformationModel(path, use_occ=True)
+    element = [e for e in reloaded.elements() if e.name == "box"][0]
+    assert element._visual_geometry.volume == pytest.approx(brep.volume, rel=1e-6)
